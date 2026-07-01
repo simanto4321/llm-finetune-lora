@@ -1,0 +1,22 @@
+{
+  "model_name": "distilbert-base-uncased",
+  "lora": {
+    "r": 8,
+    "alpha": 16,
+    "dropout": 0.1
+  },
+  "epochs": 3,
+  "validation": {
+    "eval_loss": 0.5558525919914246,
+    "eval_accuracy": 0.9285714285714286,
+    "eval_f1": 0.9282051282051282,
+    "eval_runtime": 1.8757,
+    "eval_samples_per_second": 7.464,
+    "eval_steps_per_second": 1.066,
+    "epoch": 3.0
+  },
+  "train_loss_per_epoch": [
+    0.6506,
+    0.5762
+  ]
+}
