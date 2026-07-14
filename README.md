@@ -1,19 +1,41 @@
 # LLM Fine-Tuning with LoRA
 
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![CI](https://github.com/simanto4321/llm-finetune-lora/actions/workflows/ci.yml/badge.svg)
+
 Fine-tune **DistilBERT** for binary sentiment classification using **Hugging Face Transformers** and **PEFT (LoRA)**.
 
-Uses a local JSONL dataset. Trains on **CPU or GPU**; small data size keeps runtime reasonable on a laptop.
+Uses a local JSONL dataset. Runs on CPU or GPU.
 
 ## Stack
 
-- `transformers` — DistilBERT sequence classification
-- `peft` — LoRA adapters (train ~1% of parameters)
-- `datasets` — train/val pipeline
-- `scikit-learn` — stratified split & metrics
+| Component | Role |
+|-----------|------|
+| `transformers` | DistilBERT sequence classification |
+| `peft` | LoRA adapters (~1% trainable parameters) |
+| `datasets` | Train/validation pipeline |
+| `scikit-learn` | Stratified split and metrics |
+
+## Project structure
+
+```
+llm-finetune-lora/
+├── train.py
+├── inference.py
+├── data/sentiment.jsonl
+├── metrics.json
+├── output/lora_adapter/   # bundled trained adapter
+├── requirements.txt
+├── run_train.bat
+└── run_inference.bat
+```
 
 ## Install
 
 ```bash
+git clone https://github.com/simanto4321/llm-finetune-lora.git
+cd llm-finetune-lora
 pip install -r requirements.txt
 ```
 
@@ -23,7 +45,7 @@ pip install -r requirements.txt
 python train.py
 ```
 
-Or on Windows:
+Windows:
 
 ```bat
 run_train.bat
@@ -35,22 +57,17 @@ run_train.bat
 python inference.py --text "Amazing product, highly recommend!"
 ```
 
-Or on Windows:
+Windows:
 
 ```bat
 run_inference.bat --text "Amazing product, highly recommend!"
 ```
 
-## Outputs
-
-- `output/lora_adapter/` — saved LoRA weights + tokenizer
-- `metrics.json` — validation accuracy, F1, training config
+The repository includes a trained LoRA adapter in `output/lora_adapter/` for immediate inference.
 
 ## Dataset
 
-`data/sentiment.jsonl` — 64 labeled examples (positive/negative reviews).
-
-Add lines:
+`data/sentiment.jsonl` — 64 labeled review examples.
 
 ```json
 {"text": "your review here", "label": 1}
@@ -60,13 +77,13 @@ Add lines:
 
 ## Results
 
-After training (~1 min on CPU with 64 samples):
+| Metric | Value |
+|--------|-------|
+| Validation accuracy | 92.9% |
+| Validation F1 | 92.8% |
+| Trainable params (LoRA) | ~1.09% of model |
+| Full metrics | `metrics.json` |
 
-- Validation **accuracy: 92.9%**
-- Validation **F1: 92.8%**
-- Trainable params: **~1.09%** of model (LoRA)
-- Full metrics in `metrics.json`
+## License
 
-## GPU
-
-For faster training, run `train.py` on a machine with CUDA or Google Colab GPU runtime.
+MIT — see [LICENSE](LICENSE).
