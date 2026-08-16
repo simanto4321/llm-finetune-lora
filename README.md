@@ -8,6 +8,8 @@ Fine-tune **DistilBERT** for binary sentiment classification using **Hugging Fac
 
 Uses a local JSONL dataset. Runs on CPU or GPU. Includes a scikit-learn bag-of-words baseline, reproducibility manifests, and a real model card.
 
+Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Model card: [MODEL_CARD.md](MODEL_CARD.md) · Artifacts: [ARTIFACTS.md](ARTIFACTS.md)
+
 ## Stack
 
 | Component | Role |
