@@ -2,11 +2,12 @@
 Fine-tune DistilBERT with LoRA for binary sentiment classification.
 
 Runs on CPU or GPU with a small local JSONL dataset.
+Supports --max_steps for smoke / CI-friendly runs.
 """
 
 from __future__ import annotations
 
-import json
+import argparse
 import random
 import sys
 from dataclasses import asdict, dataclass
@@ -25,14 +26,23 @@ from transformers import (
     TrainingArguments,
 )
 
+from repro import (
+    build_run_manifest,
+    load_jsonl,
+    merge_metrics_with_manifest,
+    write_json,
+    write_run_manifest,
+)
+
 ROOT = Path(__file__).resolve().parent
 DATA_PATH = ROOT / "data" / "sentiment.jsonl"
 OUTPUT_DIR = ROOT / "output"
 METRICS_PATH = ROOT / "metrics.json"
+MANIFEST_PATH = ROOT / "run_manifest.json"
 
 MODEL_NAME = "distilbert-base-uncased"
 NUM_LABELS = 2
-RANDOM_SEED = 42
+DEFAULT_SEED = 42
 MAX_LENGTH = 96
 
 
@@ -49,6 +59,8 @@ class TrainConfig:
     lora_alpha: int = 16
     lora_dropout: float = 0.1
     test_size: float = 0.2
+    max_steps: int = -1
+    seed: int = DEFAULT_SEED
 
 
 def set_seed(seed: int) -> None:
@@ -58,21 +70,6 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-
-def load_jsonl(path: Path) -> list[dict[str, object]]:
-    """Load records from a JSONL file."""
-    records: list[dict[str, object]] = []
-    with path.open(encoding="utf-8") as fh:
-        for line_no, line in enumerate(fh, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"Bad JSON at line {line_no}: {exc}") from exc
-    return records
 
 
 def build_datasets(path: Path, test_size: float, seed: int) -> tuple[Dataset, Dataset]:
@@ -135,40 +132,92 @@ def compute_metrics(eval_pred: tuple) -> dict[str, float]:
     }
 
 
-def save_metrics(history: dict, val_metrics: dict[str, float], config: TrainConfig) -> None:
-    """Persist training metrics to JSON."""
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="LoRA fine-tune DistilBERT sentiment")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument(
+        "--max_steps",
+        type=int,
+        default=-1,
+        help="If >0, stop after this many optimizer steps (smoke / CI).",
+    )
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="CPU-friendly smoke: max_steps=1, batch_size=2, 1 epoch.",
+    )
+    parser.add_argument("--data", type=Path, default=DATA_PATH)
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
+    return parser.parse_args()
+
+
+def save_metrics_and_manifest(
+    history: dict,
+    val_metrics: dict[str, float],
+    config: TrainConfig,
+    data_path: Path,
+) -> None:
+    """Persist metrics.json and run_manifest.json with reproducibility metadata."""
+    hyperparams = asdict(config)
+    manifest = build_run_manifest(
+        seed=config.seed,
+        hyperparams=hyperparams,
+        dataset_path=data_path,
+        extra={"pipeline": "lora_finetune"},
+    )
+    write_run_manifest(MANIFEST_PATH, manifest)
+
     payload = {
         "model_name": config.model_name,
+        "method": "lora",
         "lora": {
             "r": config.lora_r,
             "alpha": config.lora_alpha,
             "dropout": config.lora_dropout,
+            "target_modules": ["q_lin", "v_lin"],
         },
         "epochs": config.num_train_epochs,
+        "max_steps": config.max_steps,
+        "seed": config.seed,
         "validation": val_metrics,
         "train_loss_per_epoch": history.get("train_loss", []),
     }
-    METRICS_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    enriched = merge_metrics_with_manifest(payload, manifest)
+    write_json(METRICS_PATH, enriched)
     print(f"Metrics saved to: {METRICS_PATH}")
+    print(f"Run manifest saved to: {MANIFEST_PATH}")
 
 
 def main() -> None:
     """Run LoRA fine-tuning pipeline."""
-    config = TrainConfig()
-    set_seed(RANDOM_SEED)
+    args = parse_args()
+    config = TrainConfig(
+        num_train_epochs=1 if args.fast else args.epochs,
+        per_device_train_batch_size=2 if args.fast else 8,
+        per_device_eval_batch_size=2 if args.fast else 8,
+        max_steps=1 if args.fast else args.max_steps,
+        seed=args.seed,
+    )
+    set_seed(config.seed)
+
+    data_path = args.data
+    output_dir = args.output_dir
 
     print("=" * 60)
     print("DistilBERT Fine-Tuning with LoRA")
     print("=" * 60)
     print(f"Device: {'cuda' if torch.cuda.is_available() else 'cpu'}")
+    if config.max_steps > 0:
+        print(f"Smoke / limited run: max_steps={config.max_steps}")
 
-    if not DATA_PATH.exists():
-        print(f"Dataset not found: {DATA_PATH}", file=sys.stderr)
+    if not data_path.exists():
+        print(f"Dataset not found: {data_path}", file=sys.stderr)
         sys.exit(1)
 
     try:
         print("\n[1/5] Loading dataset...")
-        train_ds, val_ds = build_datasets(DATA_PATH, config.test_size, RANDOM_SEED)
+        train_ds, val_ds = build_datasets(data_path, config.test_size, config.seed)
         print(f"  Train: {len(train_ds)}, Val: {len(val_ds)}")
 
         print("\n[2/5] Loading tokenizer...")
@@ -187,19 +236,20 @@ def main() -> None:
         print(f"  Trainable params: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)")
 
         training_args = TrainingArguments(
-            output_dir=str(OUTPUT_DIR),
+            output_dir=str(output_dir),
             num_train_epochs=config.num_train_epochs,
+            max_steps=config.max_steps if config.max_steps > 0 else -1,
             per_device_train_batch_size=config.per_device_train_batch_size,
             per_device_eval_batch_size=config.per_device_eval_batch_size,
             learning_rate=config.learning_rate,
-            eval_strategy="epoch",
-            save_strategy="epoch",
-            logging_steps=10,
-            load_best_model_at_end=True,
+            eval_strategy="no" if config.max_steps == 1 else "epoch",
+            save_strategy="no" if config.max_steps == 1 else "epoch",
+            logging_steps=1 if config.max_steps > 0 else 10,
+            load_best_model_at_end=False if config.max_steps == 1 else True,
             metric_for_best_model="f1",
             greater_is_better=True,
             report_to="none",
-            seed=RANDOM_SEED,
+            seed=config.seed,
         )
 
         trainer = Trainer(
@@ -215,22 +265,28 @@ def main() -> None:
         train_output = trainer.train()
         eval_metrics = trainer.evaluate()
 
-        model.save_pretrained(OUTPUT_DIR / "lora_adapter")
-        tokenizer.save_pretrained(OUTPUT_DIR / "lora_adapter")
+        adapter_dir = output_dir / "lora_adapter"
+        model.save_pretrained(adapter_dir)
+        tokenizer.save_pretrained(adapter_dir)
 
         train_losses = [
             round(entry["loss"], 4)
             for entry in trainer.state.log_history
             if "loss" in entry and "eval_loss" not in entry
         ]
-        save_metrics({"train_loss": train_losses}, eval_metrics, config)
+        save_metrics_and_manifest(
+            {"train_loss": train_losses},
+            eval_metrics,
+            config,
+            data_path,
+        )
 
         print("\n--- Final validation metrics ---")
         for key, value in eval_metrics.items():
             if isinstance(value, float):
                 print(f"  {key}: {value:.4f}")
 
-        print(f"\nAdapter saved to: {OUTPUT_DIR / 'lora_adapter'}")
+        print(f"\nAdapter saved to: {adapter_dir}")
         print(f"Final train loss: {train_output.training_loss:.4f}")
         print("=" * 60)
 
