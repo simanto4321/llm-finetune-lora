@@ -1,14 +1,14 @@
 {
-  "created_at_utc": "2026-08-16T07:55:42.130023+00:00",
+  "created_at_utc": "2026-08-16T08:44:45.077085+00:00",
   "seed": 42,
   "hyperparams": {
     "test_size": 0.2,
     "seed": 42,
-    "max_features": 5000,
+    "max_features": 1000,
     "c": 1.0,
-    "max_iter": 500,
-    "fast": false,
-    "max_examples": null
+    "max_iter": 100,
+    "fast": true,
+    "max_examples": 16
   },
   "dataset": {
     "path": "data/sentiment.jsonl",
@@ -40,8 +40,8 @@
   "extra": {
     "pipeline": "bow_logistic_baseline",
     "split": {
-      "train": 52,
-      "val": 14
+      "train": 12,
+      "val": 4
     }
   }
 }

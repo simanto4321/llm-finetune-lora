@@ -2,8 +2,8 @@
   "method": "comparison",
   "seed": 42,
   "split": {
-    "train": 52,
-    "val": 14,
+    "train": 12,
+    "val": 4,
     "test_size": 0.2
   },
   "baselines": {
@@ -13,8 +13,8 @@
       "majority_label": 0
     },
     "bow_logistic": {
-      "accuracy": 0.42857142857142855,
-      "f1": 0.41666666666666663
+      "accuracy": 0.5,
+      "f1": 0.3333333333333333
     }
   },
   "lora_from_metrics": {
@@ -22,19 +22,19 @@
     "f1": 0.9282051282051282
   },
   "delta_vs_bow": {
-    "accuracy": 0.5,
-    "f1": 0.5115
+    "accuracy": 0.4286,
+    "f1": 0.5949
   },
   "reproducibility": {
     "seed": 42,
     "hyperparams": {
       "test_size": 0.2,
       "seed": 42,
-      "max_features": 5000,
+      "max_features": 1000,
       "c": 1.0,
-      "max_iter": 500,
-      "fast": false,
-      "max_examples": null
+      "max_iter": 100,
+      "fast": true,
+      "max_examples": 16
     },
     "dataset": {
       "path": "data/sentiment.jsonl",
@@ -63,6 +63,6 @@
       "cuda_device_name": null,
       "torch_device": "unavailable"
     },
-    "created_at_utc": "2026-08-16T07:55:42.130023+00:00"
+    "created_at_utc": "2026-08-16T08:44:45.077085+00:00"
   }
 }

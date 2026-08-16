@@ -1,4 +1,4 @@
-# LLM Fine-Tuning with LoRA
+﻿# LLM Fine-Tuning with LoRA
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -9,6 +9,13 @@ Fine-tune **DistilBERT** for binary sentiment classification using **Hugging Fac
 Uses a local JSONL dataset. Runs on CPU or GPU. Includes a scikit-learn bag-of-words baseline, reproducibility manifests, and a real model card.
 
 Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Model card: [MODEL_CARD.md](MODEL_CARD.md) · Artifacts: [ARTIFACTS.md](ARTIFACTS.md)
+
+
+## Demo
+
+![Baseline vs LoRA](docs/assets/baseline-vs-lora.png)
+
+![Architecture overview](docs/assets/architecture.png)
 
 ## Stack
 
@@ -23,21 +30,21 @@ Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Model card: [MODEL
 
 ```
 llm-finetune-lora/
-├── train.py                 # LoRA fine-tuning (--fast / --max_steps for smoke)
-├── inference.py             # Classify text with bundled adapter
-├── baseline.py              # Majority + BoW logistic vs LoRA metrics
-├── repro.py                 # Dataset hash, lib versions, run_manifest helpers
-├── data/sentiment.jsonl     # 66 labeled examples
-├── metrics.json             # Validation metrics + reproducibility block
-├── run_manifest.json        # Full run metadata (written by train.py)
-├── baseline_metrics.json    # Baseline comparison (written by baseline.py)
-├── MODEL_CARD.md            # Model card (intended use, limits, eval)
-├── ARTIFACTS.md             # Adapter policy, checksums, retrain steps
-├── tests/                   # Pure-Python + skippable heavy smokes
-├── output/lora_adapter/     # Bundled trained adapter (see ARTIFACTS.md)
-├── requirements.txt
-├── run_train.bat
-└── run_inference.bat
+â”œâ”€â”€ train.py                 # LoRA fine-tuning (--fast / --max_steps for smoke)
+â”œâ”€â”€ inference.py             # Classify text with bundled adapter
+â”œâ”€â”€ baseline.py              # Majority + BoW logistic vs LoRA metrics
+â”œâ”€â”€ repro.py                 # Dataset hash, lib versions, run_manifest helpers
+â”œâ”€â”€ data/sentiment.jsonl     # 66 labeled examples
+â”œâ”€â”€ metrics.json             # Validation metrics + reproducibility block
+â”œâ”€â”€ run_manifest.json        # Full run metadata (written by train.py)
+â”œâ”€â”€ baseline_metrics.json    # Baseline comparison (written by baseline.py)
+â”œâ”€â”€ MODEL_CARD.md            # Model card (intended use, limits, eval)
+â”œâ”€â”€ ARTIFACTS.md             # Adapter policy, checksums, retrain steps
+â”œâ”€â”€ tests/                   # Pure-Python + skippable heavy smokes
+â”œâ”€â”€ output/lora_adapter/     # Bundled trained adapter (see ARTIFACTS.md)
+â”œâ”€â”€ requirements.txt
+â”œâ”€â”€ run_train.bat
+â””â”€â”€ run_inference.bat
 ```
 
 ## Install
@@ -126,3 +133,5 @@ pytest tests/test_inference_smoke.py tests/test_train_smoke.py -v -m heavy
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+
